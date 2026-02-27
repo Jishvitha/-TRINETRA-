@@ -73,12 +73,17 @@ Display list of active alerts with:
 - Time elapsed
 - Status: Active
 - Button: \"Mark as Found / Clear Alert\"
+- Button: \"Delete Alert\"
 
 Functionality:
 - When Mark as Found button is clicked:
   - Change status to Resolved
   - Remove alert from citizen dashboard
   - Move to Resolved Cases section
+- When Delete Alert button is clicked:
+  - Permanently remove alert from system
+  - Alert disappears from both police and citizen dashboards
+  - Confirmation prompt before deletion
 
 #### 2.4.3 Resolved Cases Section
 - Display alerts marked as found/resolved
@@ -116,8 +121,10 @@ Camera feature requirements:
 
 ### 2.8 System Behavior and Admin Logic
 - Only Police can clear alerts
+- Only Police can delete alerts
 - Citizens cannot edit alerts
 - Alerts marked Found automatically disappear from citizen dashboard
+- Deleted alerts are permanently removed from system
 - Role-based authentication enforced throughout system
 - Police ID verification simulation required
 

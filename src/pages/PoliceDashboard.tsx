@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, CheckCircle2, AlertTriangle, Clock, Shield } from 'lucide-react';
+import { LogOut, CheckCircle2, Clock, Shield, Trash2 } from 'lucide-react';
 import { AlertForm } from '@/components/AlertForm';
-import { createAlert, getActiveAlerts, getResolvedAlerts, updateAlertStatus } from '@/db/api';
+import { createAlert, getActiveAlerts, getResolvedAlerts, updateAlertStatus, deleteAlert } from '@/db/api';
 import type { AlertFormData, Alert } from '@/types/index';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +37,7 @@ export default function PoliceDashboard() {
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [alertToResolve, setAlertToResolve] = useState<string | null>(null);
+  const [alertToDelete, setAlertToDelete] = useState<string | null>(null);
 
   // Redirect if not police or not verified
   useEffect(() => {
@@ -100,6 +101,22 @@ export default function PoliceDashboard() {
       }
     } catch (error) {
       console.error('Error updating alert:', error);
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleDeleteAlert = async (alertId: string) => {
+    try {
+      const success = await deleteAlert(alertId);
+      if (success) {
+        toast.success('Alert deleted successfully!');
+        loadAlerts();
+        setAlertToDelete(null);
+      } else {
+        toast.error('Failed to delete alert');
+      }
+    } catch (error) {
+      console.error('Error deleting alert:', error);
       toast.error('An error occurred');
     }
   };
@@ -203,14 +220,24 @@ export default function PoliceDashboard() {
                         {formatDistanceToNow(new Date(alert.time_missing), { addSuffix: true })}
                       </p>
                     </div>
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={() => setAlertToResolve(alert.id)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Mark as Found
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        className="flex-1"
+                        onClick={() => setAlertToResolve(alert.id)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Mark as Found
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setAlertToDelete(alert.id)}
+                        title="Delete Alert"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -289,6 +316,27 @@ export default function PoliceDashboard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => alertToResolve && handleMarkAsFound(alertToResolve)}>
               Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Delete Dialog */}
+      <AlertDialog open={!!alertToDelete} onOpenChange={() => setAlertToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Alert Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the alert from the system. This action cannot be undone. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => alertToDelete && handleDeleteAlert(alertToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

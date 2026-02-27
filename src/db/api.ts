@@ -89,6 +89,20 @@ export async function updateAlertStatus(id: string, status: 'active' | 'resolved
   return true;
 }
 
+export async function deleteAlert(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('alerts')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting alert:', error);
+    return false;
+  }
+
+  return true;
+}
+
 // Sighting operations
 export async function createSighting(data: SightingFormData): Promise<Sighting | null> {
   const { data: { user } } = await supabase.auth.getUser();
