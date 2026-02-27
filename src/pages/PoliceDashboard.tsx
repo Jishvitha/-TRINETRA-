@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, CheckCircle2, Clock, Shield, Trash2 } from 'lucide-react';
+import { LogOut, CheckCircle2, Clock, Shield } from 'lucide-react';
 import { AlertForm } from '@/components/AlertForm';
-import { createAlert, getActiveAlerts, getResolvedAlerts, updateAlertStatus, deleteAlert } from '@/db/api';
+import { createAlert, getActiveAlerts, getResolvedAlerts, updateAlertStatus } from '@/db/api';
 import type { AlertFormData, Alert } from '@/types/index';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,8 +37,6 @@ export default function PoliceDashboard() {
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [alertToResolve, setAlertToResolve] = useState<string | null>(null);
-  const [alertToDelete, setAlertToDelete] = useState<string | null>(null);
-  const [resolvedAlertToDelete, setResolvedAlertToDelete] = useState<string | null>(null);
 
   // Redirect if not police or not verified
   useEffect(() => {
@@ -102,38 +100,6 @@ export default function PoliceDashboard() {
       }
     } catch (error) {
       console.error('Error updating alert:', error);
-      toast.error('An error occurred');
-    }
-  };
-
-  const handleDeleteAlert = async (alertId: string) => {
-    try {
-      const success = await deleteAlert(alertId);
-      if (success) {
-        toast.success('Alert deleted successfully!');
-        loadAlerts();
-        setAlertToDelete(null);
-      } else {
-        toast.error('Failed to delete alert');
-      }
-    } catch (error) {
-      console.error('Error deleting alert:', error);
-      toast.error('An error occurred');
-    }
-  };
-
-  const handleDeleteResolvedAlert = async (alertId: string) => {
-    try {
-      const success = await deleteAlert(alertId);
-      if (success) {
-        toast.success('Resolved case deleted successfully!');
-        loadAlerts();
-        setResolvedAlertToDelete(null);
-      } else {
-        toast.error('Failed to delete resolved case');
-      }
-    } catch (error) {
-      console.error('Error deleting resolved case:', error);
       toast.error('An error occurred');
     }
   };
@@ -237,24 +203,14 @@ export default function PoliceDashboard() {
                         {formatDistanceToNow(new Date(alert.time_missing), { addSuffix: true })}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        className="flex-1"
-                        onClick={() => setAlertToResolve(alert.id)}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Mark as Found
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => setAlertToDelete(alert.id)}
-                        title="Delete Alert"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => setAlertToResolve(alert.id)}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Mark as Found
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -280,16 +236,7 @@ export default function PoliceDashboard() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {resolvedAlerts.map((alert) => (
-                <Card key={alert.id} className="opacity-75 relative group">
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setResolvedAlertToDelete(alert.id)}
-                    title="Delete Resolved Case"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                <Card key={alert.id} className="opacity-75">
                   <CardHeader className="pb-2">
                     <div className="aspect-square -mx-6 -mt-6 mb-2 overflow-hidden rounded-t-lg">
                       <img
@@ -342,48 +289,6 @@ export default function PoliceDashboard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => alertToResolve && handleMarkAsFound(alertToResolve)}>
               Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirm Delete Dialog */}
-      <AlertDialog open={!!alertToDelete} onOpenChange={() => setAlertToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Alert Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the alert from the system. This action cannot be undone. Are you sure you want to proceed?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => alertToDelete && handleDeleteAlert(alertToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Permanently
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirm Delete Resolved Case Dialog */}
-      <AlertDialog open={!!resolvedAlertToDelete} onOpenChange={() => setResolvedAlertToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Resolved Case Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the resolved case from the system. This action cannot be undone. Are you sure you want to proceed?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => resolvedAlertToDelete && handleDeleteResolvedAlert(resolvedAlertToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
