@@ -50,6 +50,9 @@ interface AuthContextType {
   loading: boolean;
   signInWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>;
+  signUpCitizenWithPhone: (phone: string, username: string, password: string) => Promise<{ error: Error | null }>;
+  sendPhoneOtp: (phone: string) => Promise<{ error: Error | null }>;
+  verifyPhoneOtp: (phone: string, token: string) => Promise<{ error: Error | null; session: any }>;
   signUpPolice: (data: PoliceRegistrationData) => Promise<{ error: Error | null }>;
   verifyPoliceId: (policeId: string) => Promise<PoliceIdVerification>;
   signOut: () => Promise<void>;
@@ -117,12 +120,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: {
           data: {
-            role: 'citizen'
+            role: 'citizen',
+            username: username
           }
         }
       });
 
       if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const sendPhoneOtp = async (phone: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phone
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const verifyPhoneOtp = async (phone: string, token: string) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: token,
+        type: 'sms'
+      });
+
+      if (error) throw error;
+      return { error: null, session: data.session };
+    } catch (error) {
+      return { error: error as Error, session: null };
+    }
+  };
+
+  const signUpCitizenWithPhone = async (phone: string, username: string, password: string) => {
+    try {
+      // First, sign up with phone and password
+      const { error: signUpError } = await supabase.auth.signUp({
+        phone: phone,
+        password: password,
+        options: {
+          data: {
+            role: 'citizen',
+            username: username
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      // Then sign in with the credentials
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        phone: phone,
+        password: password
+      });
+
+      if (signInError) throw signInError;
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -166,7 +227,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile, 
       loading, 
       signInWithUsername, 
-      signUpWithUsername, 
+      signUpWithUsername,
+      signUpCitizenWithPhone,
+      sendPhoneOtp,
+      verifyPhoneOtp,
       signUpPolice,
       verifyPoliceId,
       signOut, 

@@ -35,8 +35,8 @@ Before allowing registration:
 - System validates Police ID number format
 - Simulate verification process (mock database validation)
 - Display verification result message:
-  - ✅ \"Police ID Verified – Registration Approved\"
-  - OR ❌ \"Invalid Police ID – Access Denied\"
+  - ✅ Police ID Verified – Registration Approved
+  - OR ❌ Invalid Police ID – Access Denied
 - Only after successful verification:
   - Allow account creation
   - Redirect to Police Dashboard
@@ -72,8 +72,8 @@ Display list of active alerts with:
 - Location
 - Time elapsed
 - Status: Active
-- Button: \"Mark as Found / Clear Alert\"
-- Button: \"Delete Alert\"
+- Button: Mark as Found / Clear Alert
+- Button: Delete Alert
 
 Functionality:
 - When Mark as Found button is clicked:
@@ -88,8 +88,40 @@ Functionality:
 #### 2.4.3 Resolved Cases Section
 - Display alerts marked as found/resolved
 
-### 2.5 Citizen Login Panel
-- Simple login form
+### 2.5 Citizen Authentication System
+
+#### 2.5.1 Citizen Phone Number Verification
+When user selects Citizen option, display phone number verification page:
+- Phone Number input field
+- Send OTP button
+- OTP input field (appears after Send OTP is clicked)
+- Verify OTP button
+
+OTP Verification Process:
+- User enters phone number
+- System sends OTP to provided phone number
+- User enters received OTP
+- System validates OTP
+- Upon successful verification:
+  - Redirect to Citizen Signup Page
+
+#### 2.5.2 Citizen Signup Page
+After successful OTP verification, display signup form with:
+- Full Name
+- Username
+- Password
+- Confirm Password
+- Phone Number (pre-filled from verification step, read-only)
+- Create Account button
+
+Functionality:
+- Phone number already verified via OTP
+- User creates username and password
+- Account created after form submission
+- Redirect to Citizen Dashboard after successful signup
+
+#### 2.5.3 Citizen Login Panel
+For returning citizens:
 - Username field
 - Password field
 - Login button
@@ -103,7 +135,7 @@ Display alert cards showing:
 - Description
 - Last Location
 - Time since disappearance
-- Button: \"Report Sighting\"
+- Button: Report Sighting
 
 ### 2.7 Report Sighting System
 When citizen clicks Report Sighting button, open form with:
@@ -117,7 +149,7 @@ Camera feature requirements:
 - Capture photo as evidence
 - Save timestamp automatically
 - Photo upload mandatory before submission
-- Display message: \"Photo evidence required to reduce false reports.\"
+- Display message: Photo evidence required to reduce false reports.
 
 ### 2.8 System Behavior and Admin Logic
 - Only Police can clear alerts
@@ -127,6 +159,7 @@ Camera feature requirements:
 - Deleted alerts are permanently removed from system
 - Role-based authentication enforced throughout system
 - Police ID verification simulation required
+- Citizen phone number verification with OTP required before signup
 
 ### 2.9 Footer
 - About TRINETRA
