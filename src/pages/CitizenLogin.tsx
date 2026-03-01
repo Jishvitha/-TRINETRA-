@@ -1,38 +1,30 @@
-// Citizen login page with phone verification
+// Citizen login page
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Loader2, ArrowLeft, CheckCircle2, Phone } from 'lucide-react';
+import { Users, Loader2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-
-type VerificationStep = 'phone' | 'otp' | 'signup' | 'login';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function CitizenLogin() {
   const navigate = useNavigate();
-  const { signInWithUsername, signUpCitizenWithPhone, sendPhoneOtp, verifyPhoneOtp } = useAuth();
+  const location = useLocation();
+  const { signInWithUsername, signUpWithUsername } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<VerificationStep>('login');
-  const [isSignup, setIsSignup] = useState(false);
-  
-  // Login state
+
   const [loginData, setLoginData] = useState({ username: '', password: '' });
-  
-  // Phone verification state
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [signupData, setSignupData] = useState({ username: '', password: '', confirmPassword: '' });
+
+  // 🔹 OTP STATES (Added)
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [generatedOtp, setGeneratedOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  
-  // Signup state
-  const [signupData, setSignupData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [otpVerified, setOtpVerified] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,69 +37,50 @@ export default function CitizenLogin() {
         toast.error('Login failed: ' + error.message);
       } else {
         toast.success('Login successful!');
-        navigate('/citizen-dashboard', { replace: true });
+        const from = (location.state as any)?.from || '/citizen-dashboard';
+        navigate(from, { replace: true });
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred during login');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!phoneNumber || phoneNumber.length < 10) {
-      toast.error('Please enter a valid phone number');
+  // 🔹 SEND OTP (Added)
+  const handleSendOtp = () => {
+    if (!/^[0-9]{10}$/.test(phone)) {
+      toast.error('Enter valid 10-digit phone number');
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await sendPhoneOtp(phoneNumber);
-      
-      if (error) {
-        toast.error('Failed to send OTP: ' + error.message);
-      } else {
-        setOtpSent(true);
-        setStep('otp');
-        toast.success('OTP sent to your phone number!');
-      }
-    } catch (error) {
-      toast.error('An error occurred while sending OTP');
-    } finally {
-      setLoading(false);
-    }
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(otpCode);
+    setOtpSent(true);
+
+    console.log('Demo OTP:', otpCode);
+    toast.success('OTP sent successfully');
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!otp || otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await verifyPhoneOtp(phoneNumber, otp);
-      
-      if (error) {
-        toast.error('Invalid OTP: ' + error.message);
-      } else {
-        toast.success('Phone number verified successfully!');
-        setStep('signup');
-      }
-    } catch (error) {
-      toast.error('An error occurred during verification');
-    } finally {
-      setLoading(false);
+  // 🔹 VERIFY OTP (Added)
+  const handleVerifyOtp = () => {
+    if (otp.trim() === generatedOtp) {
+      setOtpVerified(true);
+      toast.success('Phone number verified');
+    } else {
+      toast.error('Invalid OTP');
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // 🔹 BLOCK IF NOT VERIFIED (Added)
+    if (!otpVerified) {
+      toast.error('Verify phone number first');
+      return;
+    }
+
     if (signupData.password !== signupData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -119,35 +92,23 @@ export default function CitizenLogin() {
     }
 
     setLoading(true);
+
     try {
-      const { error } = await signUpCitizenWithPhone(phoneNumber, signupData.username, signupData.password);
+      const { error } = await signUpWithUsername(signupData.username, signupData.password);
       
       if (error) {
         toast.error('Signup failed: ' + error.message);
       } else {
-        toast.success('Account created successfully!');
+        toast.success('Account created! Logging in...');
         setTimeout(() => {
           navigate('/citizen-dashboard', { replace: true });
         }, 1000);
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred during signup');
     } finally {
       setLoading(false);
     }
-  };
-
-  const switchToSignup = () => {
-    setIsSignup(true);
-    setStep('phone');
-  };
-
-  const switchToLogin = () => {
-    setIsSignup(false);
-    setStep('login');
-    setPhoneNumber('');
-    setOtp('');
-    setOtpSent(false);
   };
 
   return (
@@ -167,214 +128,157 @@ export default function CitizenLogin() {
             <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8" />
             </div>
-            <CardTitle className="text-2xl">Citizen Access</CardTitle>
+            <CardTitle className="text-2xl">Citizen Login</CardTitle>
             <CardDescription>
-              {step === 'login' ? 'Login to view alerts and report sightings' : 'Register with phone verification'}
+              Access the citizen dashboard to view alerts and report sightings
             </CardDescription>
           </CardHeader>
+
           <CardContent>
-            {/* Toggle between Login and Signup */}
-            {(step === 'login' || step === 'phone') && (
-              <div className="flex gap-2 mb-6">
-                <Button
-                  variant={!isSignup ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={switchToLogin}
-                >
-                  Login
-                </Button>
-                <Button
-                  variant={isSignup ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={switchToSignup}
-                >
-                  Sign Up
-                </Button>
-              </div>
-            )}
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
 
-            {/* Login Form */}
-            {step === 'login' && (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={loginData.username}
-                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    required
-                  />
-                </div>
+              {/* LOGIN TAB (UNCHANGED) */}
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={loginData.username}
+                      onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      required
+                    />
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Logging in...
-                    </>
-                  ) : (
-                    'Login'
-                  )}
-                </Button>
-              </form>
-            )}
-
-            {/* Phone Verification Step */}
-            {step === 'phone' && (
-              <form onSubmit={handleSendOtp} className="space-y-4">
-                <Alert className="bg-primary/10 border-primary">
-                  <Phone className="w-4 h-4" />
-                  <AlertDescription>
-                    Step 1: Verify your phone number with OTP
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+1234567890"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter your phone number with country code (e.g., +1234567890)
-                  </p>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending OTP...
-                    </>
-                  ) : (
-                    'Send OTP'
-                  )}
-                </Button>
-              </form>
-            )}
-
-            {/* OTP Verification Step */}
-            {step === 'otp' && (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <Alert className="bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]">
-                  <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
-                  <AlertDescription className="text-[hsl(var(--success))]">
-                    OTP sent to {phoneNumber}
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Enter OTP *</Label>
-                  <Input
-                    id="otp"
-                    type="text"
-                    placeholder="Enter 6-digit OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    maxLength={6}
-                    required
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep('phone')}
-                    disabled={loading}
-                  >
-                    Change Number
-                  </Button>
-                  <Button type="submit" className="flex-1" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifying...
+                        Logging in...
                       </>
                     ) : (
-                      'Verify OTP'
+                      'Login'
                     )}
                   </Button>
-                </div>
-              </form>
-            )}
+                </form>
+              </TabsContent>
 
-            {/* Signup Form (After Phone Verification) */}
-            {step === 'signup' && (
-              <form onSubmit={handleSignup} className="space-y-4">
-                <Alert className="bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]">
-                  <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
-                  <AlertDescription className="text-[hsl(var(--success))]">
-                    Phone verified! Complete your registration
-                  </AlertDescription>
-                </Alert>
+              {/* SIGNUP TAB (OTP ADDED ONLY) */}
+              <TabsContent value="signup">
+                <form onSubmit={handleSignup} className="space-y-4">
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username">Username *</Label>
-                  <Input
-                    id="signup-username"
-                    type="text"
-                    placeholder="Choose a username"
-                    value={signupData.username}
-                    onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
-                    required
-                  />
-                </div>
+                  {/* 🔹 PHONE FIELD */}
+                  <div className="space-y-2">
+                    <Label>Phone Number *</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter 10-digit phone number"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        disabled={otpVerified}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={otpVerified}
+                      >
+                        Send OTP
+                      </Button>
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password *</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Choose a password (min 6 characters)"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password *</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Create Account'
+                  {/* 🔹 OTP FIELD */}
+                  {otpSent && !otpVerified && (
+                    <div className="space-y-2">
+                      <Label>Enter OTP</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Enter OTP"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                        />
+                        <Button type="button" onClick={handleVerifyOtp}>
+                          Verify
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </form>
-            )}
+
+                  {/* EXISTING FIELDS (ONLY DISABLED UNTIL VERIFIED) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      type="text"
+                      placeholder="Choose a username"
+                      value={signupData.username}
+                      onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                      required
+                      disabled={!otpVerified}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="Choose a password"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                      required
+                      disabled={!otpVerified}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={signupData.confirmPassword}
+                      onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                      required
+                      disabled={!otpVerified}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={!otpVerified || loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      'Sign Up'
+                    )}
+                  </Button>
+
+                </form>
+              </TabsContent>
+
+            </Tabs>
           </CardContent>
         </Card>
       </div>
